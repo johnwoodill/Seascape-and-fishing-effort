@@ -1,3 +1,4 @@
+import ray
 import pandas as pd
 import os
 import glob
@@ -5,6 +6,11 @@ import netCDF4
 from netCDF4 import Dataset
 from scipy import spatial
 import numpy as np
+from joblib import Parallel, delayed
+import multiprocessing
+
+
+
 
 lon1 = -68
 lon2 = -51
@@ -69,8 +75,8 @@ gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_data.feather")
 # seascape data
 sea = pd.read_feather("data/noaa_seascape_Patagonia_Shelf_2012-2016.feather")
 
-gfw.head()
-sea.head()
+#gfw.head()
+#sea.head()
 
 
 # For each day
@@ -100,28 +106,52 @@ dat2 = sea[(sea['year'] == 2016)]
 #dat1 = dat1.head(50)
 #dat2 = dat2.head(50)
 
-
+#dat = dat1[dat1['date'] == "2016-01-01"]
 
 def dist(lat1, lon1, lat2, lon2):
     return np.sqrt( (lat2 - lat1)**2 + (lon2 - lon1)**2)
 
 def find_seascape(lat, lon):
-    distances = dat2.apply(
+
+    lat1 = lat - 1
+    lat2 = lat + 1
+    lon1 = lon - 1
+    lon2 = lon + 1
+
+    indat = dat2[(dat2['degrees_east'] >= lon1) & (dat2['degrees_east'] <= lon2)] 
+    indat = indat[(indat['degrees_north'] >= lat1) & (indat['degrees_north'] <= lat2)]
+
+    distances = indat.apply(
         lambda row: dist(lat, lon, row['degrees_north'], row['degrees_east']), 
         axis=1)
-    return dat2.loc[distances.idxmin(), 'None']
+    
+    return indat.loc[distances.idxmin(), 'None']
+    
+def process_days(dat):
+    date = dat['date'].iat[0]
+    dat['seascape'] = dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1)
+    outdat = dat.reset_index(drop=True)
+    outdat.to_feather(f"data/process_CLASS/process_gfw_seascape_CLASS_2016_{date}.feather")
+    print(date)
 
-print("Processing 2016 Seascapes")
+gb = dat1.groupby('date')
+days = [gb.get_group(x) for x in gb.groups]
 
-dat1['seascape'] = dat1.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1)
+pool = multiprocessing.Pool(40, maxtasksperchild=1)         
+pool.map(process_days, days)
+pool.close()
 
-outdat = dat1.reset_index(drop=True)
 
+#print("Processing 2016 Seascapes")
+
+#dat1['seascape'] = dat1.apply(lambda row: find_seascape(row['date'], row['lat2'], row['lon2']), axis=1)
+
+#outdat = dat1.reset_index(drop=True)
 
 #dat1.groupby('seascape')['fishing_hours'].sum()
 
-print("Saving file to data/process_gfw_seascape_2016.feather")
+#print("Saving file to data/process_gfw_seascape_CLASS_2016_test.feather")
 
-outdat.to_feather('data/process_gfw_seascape_2016.feather')
+#outdat.to_feather('data/process_gfw_seascape_CLASS_2016_test.feather')
 
 #test = pd.read_feather('data/process_gfw_seascape_2016.feather')
