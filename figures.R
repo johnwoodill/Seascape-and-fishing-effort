@@ -105,8 +105,9 @@ head(sea)
 dataset$day <- day(dataset$date)
 dataset$month <- month(dataset$date)
 dataset$year <- year(dataset$date)
+dataset$hour <- hour(dataset$date)
 
-gfw <- filter(dataset, day == 1 & month == 1 & year == 2016)
+gfw <- filter(dataset, day == 1 & month == 1 & year == 2016 & hour == 10)
 head(gfw)
 
 gfw$seascape <- factor(gfw$seascape, levels = seq(1, 33), labels = c("NORTH ATLANTIC SPRING, ACC TRANSITION",
@@ -180,6 +181,23 @@ dat1 <- dataset %>%
 # Month measure
 dat2 <- dataset %>% 
   filter(!is.na(seascape)) %>% 
+  group_by(month, seascape) %>% 
+  summarise(sum_fishing_hours = sum(fishing_hours),
+            sum_obs = sum(n())) %>% 
+  ungroup() %>% 
+  mutate(total_fishing_hours = sum(sum_fishing_hours),
+         total_obs = sum(sum_obs)) %>% 
+  mutate(p_effort_sea = sum_fishing_hours/total_fishing_hours,
+         p_sample_sea = sum_obs/total_obs,
+         likelihood = p_effort_sea/p_sample_sea) %>% 
+  mutate(seascape = as.factor(seascape)) %>% 
+  left_join(seascape_labels, by="seascape") %>% 
+  filter(!is.na(seascape)) %>%
+  mutate(seascape = reorder(seascape, likelihood),
+         month = factor(month.abb[month], month.abb))
+
+dat3 <- dataset %>% 
+  filter(!is.na(seascape)) %>% 
   group_by(year, month, seascape) %>% 
   summarise(sum_fishing_hours = sum(fishing_hours),
             sum_obs = sum(n())) %>% 
@@ -206,8 +224,6 @@ ggplot(dat0, aes(x=seascape, y=likelihood, fill=seascape))  +
   theme(legend.position = "none",
         panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
   ylim(0, 1.75) +
-  annotate(geom = "table", x = 37, y = -0.8, label = list(dat0), 
-           vjust = 1, hjust = 0) +
   # scale_y_continuous(expand = c(0, 0), 
   #                  breaks = c(0, 0.25, 0.5, 0.75, 1),
   #                  labels = c("0", "0.25", "0.5", "0.75", "1"),
@@ -246,6 +262,26 @@ ggplot(dat2, aes(x=seascape, y=likelihood, fill=seascape))  +
   geom_text(aes(label = nominal), hjust=0, size=2.5) +
   theme(legend.position = "none",
         panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
+  scale_y_continuous(expand = c(0, 0),
+                     breaks = c(0, 1, 5),
+                     labels = c("0", "1", ""),
+                     lim=c(0, 6)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "black") + 
+  facet_wrap(~month, ncol = 4) +
+  NULL
+
+ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_monthly_weighted_fishing_effort.pdf", width=15, height=12)
+
+
+ggplot(dat3, aes(x=seascape, y=likelihood, fill=seascape))  + 
+  theme_tufte(12) +
+  labs(y="Likelihood Ratio \n (P(effort) / P(sample))", x="Seascape Category") +
+  scale_fill_viridis(discrete = TRUE, direction = -1) +
+  geom_bar(stat="identity") + 
+  coord_flip() + 
+  geom_text(aes(label = nominal), hjust=0, size=2.5) +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
   # scale_y_continuous(expand = c(0, 0), 
   #                    breaks = c(0, 0.25, 0.5, 0.75, 1),
   #                    labels = c("0", "0.25", "0.5", "0.75", "1"),
@@ -255,7 +291,8 @@ ggplot(dat2, aes(x=seascape, y=likelihood, fill=seascape))  +
   facet_wrap(~month+year, ncol = 5) +
   NULL
 
-ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_monthly_weighted_fishing_effort.pdf", width=15, height=40)
+ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_year_monthly_weighted_fishing_effort.pdf", width=15, height=40)
+
 
 
 # Map
@@ -346,7 +383,7 @@ ggsave("~/Projects/Seascape-and-fishing-effort/figures/aggregate_table.pdf", plo
 library(stargazer)
 stargazer(dat0, summarise=FALSE)
 
-system("pdfunite Patagonia_map.pdf EDA_aggregate_weighted_fishing_effort.pdf aggregate_table.pdf EDA_annual_weighted_fishing_effort.pdf EDA_monthly_weighted_fishing_effort.pdf Patagonia_fishing_effort_EDA.pdf")
+system("pdfunite Patagonia_map.pdf EDA_aggregate_weighted_fishing_effort.pdf aggregate_table.pdf EDA_annual_weighted_fishing_effort.pdf EDA_monthly_weighted_fishing_effort.pdf EDA_year_monthly_weighted_fishing_effort.pdf Patagonia_fishing_effort_EDA.pdf")
 
 
 map3 <- ggplot(NULL) +
