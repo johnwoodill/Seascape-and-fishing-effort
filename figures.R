@@ -142,6 +142,25 @@ gfw$seascape <- factor(gfw$seascape, levels = seq(1, 33), labels = c("NORTH ATLA
                                                                      "1-30% ICE PRESENT",
                                                                      "30-80% MARGINAL ICE","PACK ICE"))
 
+
+dat00 <- dataset %>% 
+  filter(!is.na(seascape)) %>% 
+  group_by(seascape) %>% 
+  summarise(sum_fishing_hours = sum(fishing_hours),
+            sum_obs = n()) %>% 
+  ungroup() %>% 
+  mutate(total_fishing_hours = sum(sum_fishing_hours),
+         total_obs = sum(sum_obs)) %>% 
+  mutate(p_effort_sea = sum_fishing_hours/total_fishing_hours,
+         p_sample_sea = sum_obs/total_obs,
+         likelihood = p_effort_sea/p_sample_sea) %>% 
+  mutate(seascape = as.factor(seascape)) %>% 
+  left_join(seascape_labels, by="seascape") %>% 
+  filter(!is.na(seascape)) %>%
+  mutate(seascape = reorder(seascape, sum_fishing_hours))
+
+
+
 dat0 <- dataset %>% 
   filter(!is.na(seascape)) %>% 
   group_by(seascape) %>% 
@@ -178,6 +197,22 @@ dat1 <- dataset %>%
   filter(!is.na(seascape)) %>%
   mutate(seascape = reorder(seascape, likelihood))
 
+dat11 <- dataset %>% 
+  filter(!is.na(seascape)) %>% 
+  group_by(year, seascape) %>% 
+  summarise(sum_fishing_hours = sum(fishing_hours),
+            sum_obs = sum(n())) %>% 
+  ungroup() %>% 
+  mutate(total_fishing_hours = sum(sum_fishing_hours),
+         total_obs = sum(sum_obs)) %>% 
+  mutate(p_effort_sea = sum_fishing_hours/total_fishing_hours,
+         p_sample_sea = sum_obs/total_obs,
+         likelihood = p_effort_sea/p_sample_sea) %>% 
+  mutate(seascape = as.factor(seascape)) %>% 
+  left_join(seascape_labels, by="seascape") %>% 
+  filter(!is.na(seascape)) %>%
+  mutate(seascape = reorder(seascape, sum_fishing_hours))
+
 # Month measure
 dat2 <- dataset %>% 
   filter(!is.na(seascape)) %>% 
@@ -196,6 +231,26 @@ dat2 <- dataset %>%
   mutate(seascape = reorder(seascape, likelihood),
          month = factor(month.abb[month], month.abb))
 
+
+dat22 <- dataset %>% 
+  filter(!is.na(seascape)) %>% 
+  group_by(month, seascape) %>% 
+  summarise(sum_fishing_hours = sum(fishing_hours),
+            sum_obs = sum(n())) %>% 
+  ungroup() %>% 
+  mutate(total_fishing_hours = sum(sum_fishing_hours),
+         total_obs = sum(sum_obs)) %>% 
+  mutate(p_effort_sea = sum_fishing_hours/total_fishing_hours,
+         p_sample_sea = sum_obs/total_obs,
+         likelihood = p_effort_sea/p_sample_sea) %>% 
+  mutate(seascape = as.factor(seascape)) %>% 
+  left_join(seascape_labels, by="seascape") %>% 
+  filter(!is.na(seascape)) %>%
+  mutate(seascape = reorder(seascape, sum_fishing_hours),
+         month = factor(month.abb[month], month.abb))
+
+
+
 dat3 <- dataset %>% 
   filter(!is.na(seascape)) %>% 
   group_by(year, month, seascape) %>% 
@@ -212,6 +267,36 @@ dat3 <- dataset %>%
   filter(!is.na(seascape)) %>%
   mutate(seascape = reorder(seascape, likelihood),
          month = factor(month.abb[month], month.abb))
+
+
+ggplot(dat00, aes(x=factor(seascape), y=sum_fishing_hours)) +
+  theme_tufte(12) +
+  labs(y="Total Fishing Hours \n (2012-2016)", x='Seascapes') +
+  geom_bar(stat='identity') +
+  theme(panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
+  NULL
+
+ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_aggregate_total_fishing_effort.pdf", width=6, height=4)
+
+ggplot(dat11, aes(x=factor(seascape), y=sum_fishing_hours)) +
+  theme_tufte(12) +
+  labs(y="Total Fishing Hours \n (2012-2016)", x='Seascapes') +
+  geom_bar(stat='identity') +
+  theme(panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
+  facet_wrap(~year) +
+  NULL
+
+ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_annual_total_fishing_effort.pdf", width=10, height=6)
+
+ggplot(dat22, aes(x=factor(seascape), y=sum_fishing_hours)) +
+  theme_tufte(12) +
+  labs(y="Total Fishing Hours", x='Seascapes') +
+  geom_bar(stat='identity') +
+  theme(panel.border = element_rect(colour = "grey", fill=NA, size=1)) +
+  facet_wrap(~month) +
+  NULL
+
+ggsave("~/Projects/Seascape-and-fishing-effort/figures/EDA_monthly_total_fishing_effort.pdf", width=12, height=8)
 
 
 ggplot(dat0, aes(x=seascape, y=likelihood, fill=seascape))  + 
@@ -383,7 +468,7 @@ ggsave("~/Projects/Seascape-and-fishing-effort/figures/aggregate_table.pdf", plo
 library(stargazer)
 stargazer(dat0, summarise=FALSE)
 
-system("pdfunite Patagonia_map.pdf EDA_aggregate_weighted_fishing_effort.pdf aggregate_table.pdf EDA_annual_weighted_fishing_effort.pdf EDA_monthly_weighted_fishing_effort.pdf EDA_year_monthly_weighted_fishing_effort.pdf Patagonia_fishing_effort_EDA.pdf")
+system("pdfunite Patagonia_map.pdf EDA_aggregate_total_fishing_effort.pdf EDA_annual_total_fishing_effort.pdf EDA_monthly_total_fishing_effort.pdf EDA_aggregate_weighted_fishing_effort.pdf aggregate_table.pdf EDA_annual_weighted_fishing_effort.pdf EDA_monthly_weighted_fishing_effort.pdf EDA_year_monthly_weighted_fishing_effort.pdf Patagonia_fishing_effort_EDA.pdf")
 
 
 map3 <- ggplot(NULL) +
@@ -393,3 +478,8 @@ map3 <- ggplot(NULL) +
   theme_tufte(12) +
   geom_point(data=filter(sea, seascape == "TEMPERATE BLOOMS UPWELLING"), aes(x=degrees_east, y=degrees_north, color=factor(seascape)))
 map3
+
+
+
+
+

@@ -1,4 +1,0 @@
-https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-48&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf
-
-# CSV
-https://cwcgom.aoml.noaa.gov/erddap/griddap/noaa_aoml_seascapes_8day.htmlTable?CLASS%5B(2012-01-01T12:00:00Z)%5D%5B(-47.975):(-38.975)%5D%5B(-67.975):(-50.975)%5D&.draw=surface&.vars=longitude%7Clatitude%7CCLASS&.colorBar=%7C%7C%7C%7C%7C&.bgColor=0xffccccff
