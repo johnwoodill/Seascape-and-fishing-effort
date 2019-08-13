@@ -10,6 +10,8 @@ from joblib import Parallel, delayed
 import multiprocessing
 from datetime import datetime
 import xarray as xr
+from tqdm import tqdm, tqdm_pandas, tqdm_notebook
+tqdm.pandas()
 
 LON1 = -68
 LON2 = -51
@@ -94,6 +96,30 @@ LAT2 = -39
 # rdat = rdat[['date', 'lon', 'lat', 'sst']]
 # rdat.to_feather('data/patagonia_shelf_SST_2012-2016.feather')
 
+
+# Parse: CHL -----------------------------------------------
+
+files = glob.glob('/data2/CHL/NC/8DAY/*.nc')
+
+rdat = pd.DataFrame()
+for file_ in files:
+    ds = xr.open_dataset(file_, drop_variables=['palette'])
+    df = ds.to_dataframe().reset_index()
+    df = df[(df['lon'] >= LON1) & (df['lon'] <= LON2)]
+    df = df[(df['lat'] >= LAT1) & (df['lat'] <= LAT2)]
+    df['date'] = ds.time_coverage_start
+    year = pd.DatetimeIndex(df['date'])[0].year
+    month = pd.DatetimeIndex(df['date'])[0].month
+    day = pd.DatetimeIndex(df['date'])[0].day
+    df['date'] = f"{year}" + f"-{month}".zfill(3) + f"-{day}".zfill(3)
+    df = df[['date', 'lon', 'lat', 'chlor_a']]
+    rdat = pd.concat([rdat, df])
+    print(f"{year}" + f"-{month}".zfill(3) + f"-{day}".zfill(3))
+
+rdat = rdat.reset_index()
+rdat = rdat[['date', 'lon', 'lat', 'chlor_a']]
+rdat.to_feather('data/patagonia_shelf_CHL_2012-2016.feather')
+
 #--------------------------------------------------------------------------------
 
 # Load processed files
@@ -111,6 +137,9 @@ sea = pd.read_feather("data/noaa_seascape_Patagonia_Shelf_2012-2016.feather")
 # sea surface temp
 sst = pd.read_feather('data/patagonia_shelf_SST_2012-2016.feather')
 
+# Chlor
+chl = pd.read_feather('data/patagonia_shelf_CHL_2012-2016.feather')
+
 #gfw.head()
 #sea.head()
 #sst.head()
@@ -124,15 +153,17 @@ sst = pd.read_feather('data/patagonia_shelf_SST_2012-2016.feather')
 gfw['year'] = pd.DatetimeIndex(gfw['date']).year
 sea['year'] = pd.DatetimeIndex(sea['date']).year
 sst['year'] = pd.DatetimeIndex(sst['date']).year
+chl['year'] = pd.DatetimeIndex(chl['date']).year
 
 gfw['month'] = pd.DatetimeIndex(gfw['date']).month
 sea['month'] = pd.DatetimeIndex(sea['date']).month
 sst['month'] = pd.DatetimeIndex(sst['date']).month
+chl['month'] = pd.DatetimeIndex(chl['date']).month
 
 gfw['day'] = pd.DatetimeIndex(gfw['date']).day
 sea['day'] = pd.DatetimeIndex(sea['date']).day
 sst['day'] = pd.DatetimeIndex(sst['date']).day
-
+chl['day'] = pd.DatetimeIndex(chl['date']).day
 
 #dat1 = gfw[(gfw['year'] == 2016) & (gfw['month'] == 1) & (gfw['day'] == 1)]
 #dat2 = sea[(sea['year'] == 2016) & (sea['month'] == 1) & (sea['day'] == 1)]
@@ -141,6 +172,7 @@ sst['day'] = pd.DatetimeIndex(sst['date']).day
 dat1 = gfw[(gfw['year'] != 2016)]
 dat2 = sea[(sea['year'] != 2016)]
 dat3 = sst[(sst['year'] != 2016)]
+dat4 = chl[(chl['year'] != 2016)]
 
 #len(dat1)
 #len(dat2)
@@ -158,10 +190,10 @@ def find_seascape(lat, lon):
     #lat = -47
     #lon = -67
 
-    lat1 = lat - 1
-    lat2 = lat + 1
-    lon1 = lon - 1
-    lon2 = lon + 1
+    lat1 = lat - .5
+    lat2 = lat + .5
+    lon1 = lon - .5
+    lon2 = lon + .5
 
     indat = dat2[(dat2['degrees_east'].values >= lon1) & (dat2['degrees_east'].values <= lon2) & (dat2['degrees_north'].values >= lat1) & (dat2['degrees_north'].values <= lat2)] 
     
@@ -173,10 +205,10 @@ def find_seascape(lat, lon):
 
 def find_sst(lat, lon):
 
-    lat1 = lat - 1
-    lat2 = lat + 1
-    lon1 = lon - 1
-    lon2 = lon + 1
+    lat1 = lat - .5
+    lat2 = lat + .5
+    lon1 = lon - .5
+    lon2 = lon + .5
 
     indat = dat3[(dat3['lon'].values >= lon1) & (dat3['lon'].values <= lon2) & (dat3['lat'].values >= lat1) & (dat3['lat'].values <= lat2)] 
     
@@ -184,19 +216,41 @@ def find_sst(lat, lon):
         lambda row: dist(lat, lon, row['lat'], row['lon']), 
         axis=1)
     
-    return indat.loc[distances.idxmin(), 'None']
+    return indat.loc[distances.idxmin(), 'sst']
+
+def find_chlor(lat, lon):
+
+    lat1 = lat - .5
+    lat2 = lat + .5
+    lon1 = lon - .5
+    lon2 = lon + .5
+
+    indat = dat4[(dat4['lon'].values >= lon1) & (dat4['lon'].values <= lon2) & (dat4['lat'].values >= lat1) & (dat4['lat'].values <= lat2)] 
+    
+    distances = indat.apply(
+        lambda row: dist(lat, lon, row['lat'], row['lon']), 
+        axis=1)
+    
+    return indat.loc[distances.idxmin(), 'chlor_a']
 
 #@ray.remote
 def process_days(dat):
     date = dat['date'].iat[0]
-    print(date)
+    print(f"Processing data for: {date}")
 
+    print("1-Linking Effort and Seascape")
     # Link seascape to effort
     dat['seascape'] = dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1)
     
+    print("2-Linking Effort and SST")
     # Link sst to effort
-    #dat['sst'] = dat.apply(lambda row: find_sst(row['lat2'], row['lon2']), axis=1)
+    dat['sst'] = dat.apply(lambda row: find_sst(row['lat2'], row['lon2']), axis=1)
     
+    print("3-Linking Effort and CHL")
+    # Link sst to effort
+    dat['chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
+
+    print(f"4-Save data to data/processed/processed_{date}.feather")
     # Save data
     outdat = dat.reset_index(drop=True)
     outdat.to_feather(f"data/processed/processed_{date}.feather")
@@ -206,35 +260,38 @@ def process_days(dat):
 gb = dat1.groupby('date')
 days = [gb.get_group(x) for x in gb.groups]
 
-days = days[1]
+days = days[0]
+
+dat = days
 
 test = process_days(days)
 
-#ray.init(object_store_memory=17**9, redis_max_memory=17**9)
+#ray.init()
 
 #1626474458
 #1000000000
 
 #results = ray.get([process_days.remote(i) for i in days])
-
+#
 #ray.shutdown()
 
-pool = multiprocessing.Pool(50, maxtasksperchild=1)         
+#pool = multiprocessing.Pool(50, maxtasksperchild=1)         
+pool = multiprocessing.Pool(50)
 pool.map(process_days, days)
 pool.close()
 
 # Combine processed files
-files = glob.glob('data/processed/*.feather')
-files
-list_ = []
-for file in files:
-    df = pd.read_feather(file)
-    list_.append(df)
-    mdat = pd.concat(list_, sort=False)
+# files = glob.glob('data/processed/*.feather')
+# files
+# list_ = []
+# for file in files:
+#     df = pd.read_feather(file)
+#     list_.append(df)
+#     mdat = pd.concat(list_, sort=False)
 
 
-mdat = mdat.reset_index()
-mdat.to_feather('data/full_gfw_seascape_CLASS_2012-01-01_2016-12-18.feather')
+# mdat = mdat.reset_index()
+# mdat.to_feather('data/full_gfw_seascape_CLASS_2012-01-01_2016-12-18.feather')
 
 
 
