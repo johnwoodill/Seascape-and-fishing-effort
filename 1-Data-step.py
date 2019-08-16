@@ -262,7 +262,7 @@ def find_sst(lat, lon):
     distances = indat.apply(
         lambda row: dist(lat, lon, row['lat'], row['lon']), 
         axis=1)
-    
+    print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
     return indat.loc[distances.idxmin(), 'sst']
 
 def find_chlor(lat, lon):
@@ -278,6 +278,7 @@ def find_chlor(lat, lon):
         lambda row: dist(lat, lon, row['lat'], row['lon']), 
         axis=1)
     
+    
     return indat.loc[distances.idxmin(), 'chlor_a']
 
 #@ray.remote
@@ -287,7 +288,7 @@ def process_days(dat):
 
     #print("1-Linking Effort and Seascape")
     # Link seascape to effort
-    dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1))
+    #dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1))
     # zip(*df_test['size'].apply(sizes))
     
     #print("2-Linking Effort and SST")
@@ -296,27 +297,33 @@ def process_days(dat):
     
     #print("3-Linking Effort and CHL")
     # Link sst to effort
-    dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
+    #dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
 
     #print(f"4-Save data to data/processed/processed_{date}.feather")
     # Save data
     outdat = dat.reset_index(drop=True)
-    outdat.to_feather(f"data/processed/processed_{date}.feather")
-    print(f"{date}: COMPLETE")
+    #outdat.to_feather(f"data/processed/processed_{date}.feather")
+    #print(f"{date}: COMPLETE")
+
+    return outdat
 
 
 gb = gfw.groupby('date')
 days = [gb.get_group(x) for x in gb.groups]
 
 # Debug
-#days = days[0:2]
+days = days[0]
 
 #days[0] = days[0].loc[0:3, :]
 #days[1] = days[1].loc[0:3, :]
 
-#days = days.loc[1:3, :]
+days = days.loc[1:3, :]
+
 #dat = days.loc[1:3, :]
-#test = process_days(dat)
+test = process_days(days)
+test2 = sst[sst.date == '2012-01-01']
+
+test2.head()
 
 #ray.init()
 #1626474458
