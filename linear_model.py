@@ -3,10 +3,25 @@ import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import seaborn as sns
+import glob
 
-dat = pd.read_feather('data/full_gfw_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
-dat = dat[dat.geartype == 'drifting_longlines']
-dat = dat.sort_values('date')
+files = glob.glob('data/processed/*.feather')
+files
+list_ = []
+for file in files:
+    df = pd.read_feather(file)
+    list_.append(df)
+    mdat = pd.concat(list_, sort=False)
+
+
+mdat = mdat.reset_index(drop=True)
+
+dat = mdat
+
+# Full processed data
+# dat = pd.read_feather('data/full_gfw_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
+# dat = dat[dat.geartype == 'drifting_longlines']
+# dat = dat.sort_values('date')
 
 # ~50% of obs are zero (remove?)
 len(dat[dat.fishing_hours > 0])/len(dat)
@@ -63,11 +78,11 @@ sns.scatterplot(x='chlor_a', y='fishing_hours', data = dat)
 
 
 
-
 # Correlation plot
 cordat = moddat
 cordat['fishing_hours'] = y
 cordat.head()
+cordat.corr()
 
 corr = cordat.corr()
 mask = np.zeros_like(corr, dtype=np.bool)

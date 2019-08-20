@@ -14,6 +14,10 @@ from tqdm import tqdm, tqdm_pandas, tqdm_notebook
 import urllib
 from datetime import datetime, timedelta
 import urllib.request
+import geopandas as gpd
+from shapely.geometry import Point, Polygon, shape
+import shapefile
+
 
 LON1 = -68
 LON2 = -51
@@ -70,9 +74,11 @@ LAT2 = -39
 #  '2016-10-15', '2016-10-23', '2016-10-31', '2016-11-08', '2016-11-16',
 #  '2016-11-24', '2016-12-02', '2016-12-10', '2016-12-18', '2016-12-26']
 
-#Parse: GFW Effort Data -----------------------------------------------
+# ----------------------------------------------------------------------
+# Parse: GFW Effort Data -----------------------------------------------
 # Get global fish watch data
 # GFW_DIR = '/data2/GFW_public/fishing_effort_100d/daily_csvs'
+# GFW_DIR = '/data2/GFW_public/fishing_effort_10d/daily_csvs'
 
 # # # allFiles = sorted(glob.glob(GFW_DIR + "/*.csv"))
 
@@ -81,21 +87,58 @@ LAT2 = -39
 # # # Append files in subdir
 # for i in range(len(OC_8D)):
 #     file_ = f"{GFW_DIR}/{OC_8D[i]}.csv"
-#     print(file_)
+#     #print(file_)
 #     df = pd.read_csv(file_, index_col=None, header=0, low_memory=False)
-#     df['lat1'] = df['lat_bin']/100
-#     df['lon1'] = df['lon_bin']/100
-#     df['lat2'] = df['lat1'] + 0.010
-#     df['lon2'] = df['lon1'] + 0.010
+    
+#     # 10d
+#     df['lat1'] = df['lat_bin']/10
+#     df['lon1'] = df['lon_bin']/10
+#     df['lat2'] = df['lat1'] + 0.10
+#     df['lon2'] = df['lon1'] + 0.10
+
+#     # 100d
+#     # df['lat1'] = df['lat_bin']/100
+#     # df['lon1'] = df['lon_bin']/100
+#     # df['lat2'] = df['lat1'] + 0.010
+#     # df['lon2'] = df['lon1'] + 0.010
+    
 #     dat = df[(df['lon1'] >= LON1) & (df['lon2'] <= LON2) & (df['lat1'] >= LAT1) & (df['lat2'] <= LAT2)] 
-#     list_.append(dat)
-#     outdat = pd.concat(list_, axis = 0, ignore_index = True)
+#     outdat = pd.concat([outdat, dat])
 #     print(OC_8D[i])
 
-# outdat.to_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
+# outdat.head()
+
+# Assign EEZ indicator for GFW
+# def eez_check(lon, lat):
+#     pnts = gpd.GeoDataFrame(geometry=[Point(lon, lat)])
+#     check = pnts.assign(**{key: pnts.within(geom) for key, geom in polys.items()})
+#     return check.Argentina_EEZ.values[0]
 
 
+# shpfile1 = gpd.read_file("data/EEZ/eez_v10.shp")
+# arg = shpfile1[shpfile1.Territory1 == 'Argentina'].reset_index(drop=True)  #268
 
+# lat = -45
+# lon = -63
+
+# # Get polygons to check
+# polys = gpd.GeoSeries({
+#     'Argentina_EEZ': arg.geometry
+# })
+
+# # gfw = gfw.loc[1:50, :]
+
+# # Get lat/lon for vessels
+# outdat.loc[:, 'eez'] = outdat.apply(lambda x: eez_check(x['lon1'], x['lat1']), axis=1)
+
+# outdat.head()
+
+# outdat = outdat.reset_index(drop=True)
+#outdat.to_feather("data/patagonia_shelf_gfw_effort_10d_data.feather")
+#outdat.to_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
+
+
+# --------------------------------------------------------------------
 # Parse: Seascape Data -----------------------------------------------
 
 # https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-48&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf
@@ -176,7 +219,8 @@ LAT2 = -39
 # lon_bin western edge of grid
 # lat2 northern edge
 # lon2 eastern edge
-gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
+gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_10d_data.feather")
+# gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
 
 # seascape data
 sea = pd.read_feather("data/patagonia_shelf_seascapes_2012-2016.feather")
@@ -190,6 +234,10 @@ chl = pd.read_feather('data/patagonia_shelf_CHL_2012-2016.feather')
 #gfw.head()
 #sea.head()
 #sst.head()
+
+
+
+
 
 
 
@@ -262,7 +310,7 @@ def find_sst(lat, lon):
     distances = indat.apply(
         lambda row: dist(lat, lon, row['lat'], row['lon']), 
         axis=1)
-    print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
+    #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
     return indat.loc[distances.idxmin(), 'sst']
 
 def find_chlor(lat, lon):
@@ -288,7 +336,7 @@ def process_days(dat):
 
     #print("1-Linking Effort and Seascape")
     # Link seascape to effort
-    #dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1))
+    dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1))
     # zip(*df_test['size'].apply(sizes))
     
     #print("2-Linking Effort and SST")
@@ -297,33 +345,33 @@ def process_days(dat):
     
     #print("3-Linking Effort and CHL")
     # Link sst to effort
-    #dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
+    dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
 
-    #print(f"4-Save data to data/processed/processed_{date}.feather")
+    print(f"4-Save data to data/processed/processed_{date}.feather")
     # Save data
     outdat = dat.reset_index(drop=True)
-    #outdat.to_feather(f"data/processed/processed_{date}.feather")
+    outdat.to_feather(f"data/processed/processed_{date}.feather")
     #print(f"{date}: COMPLETE")
 
-    return outdat
+    #return outdat
 
 
 gb = gfw.groupby('date')
 days = [gb.get_group(x) for x in gb.groups]
 
 # Debug
-days = days[0]
+#days = days[0]
 
 #days[0] = days[0].loc[0:3, :]
 #days[1] = days[1].loc[0:3, :]
 
-days = days.loc[1:3, :]
+#days = days.loc[1:3, :]
 
 #dat = days.loc[1:3, :]
-test = process_days(days)
-test2 = sst[sst.date == '2012-01-01']
+#test = process_days(days)
+#test2 = sst[sst.date == '2012-01-01']
 
-test2.head()
+#test2.head()
 
 #ray.init()
 #1626474458
