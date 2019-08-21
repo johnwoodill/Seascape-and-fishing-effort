@@ -74,13 +74,14 @@ LAT2 = -39
 #  '2016-10-15', '2016-10-23', '2016-10-31', '2016-11-08', '2016-11-16',
 #  '2016-11-24', '2016-12-02', '2016-12-10', '2016-12-18', '2016-12-26']
 
-# ----------------------------------------------------------------------
-# Parse: GFW Effort Data -----------------------------------------------
-# Get global fish watch data
-# GFW_DIR = '/data2/GFW_public/fishing_effort_100d/daily_csvs'
+# # ----------------------------------------------------------------------
+# # Parse: GFW Effort Data -----------------------------------------------
+# # Get global fish watch data
 # GFW_DIR = '/data2/GFW_public/fishing_effort_10d/daily_csvs'
 
-# # # allFiles = sorted(glob.glob(GFW_DIR + "/*.csv"))
+# # Load fishing vessel list
+# vessels = pd.read_csv('/data2/GFW_public/fishing_vessels/fishing_vessels.csv')
+# vessels.head()
 
 # list_ = []
 # outdat = pd.DataFrame()
@@ -95,12 +96,6 @@ LAT2 = -39
 #     df['lon1'] = df['lon_bin']/10
 #     df['lat2'] = df['lat1'] + 0.10
 #     df['lon2'] = df['lon1'] + 0.10
-
-#     # 100d
-#     # df['lat1'] = df['lat_bin']/100
-#     # df['lon1'] = df['lon_bin']/100
-#     # df['lat2'] = df['lat1'] + 0.010
-#     # df['lon2'] = df['lon1'] + 0.010
     
 #     dat = df[(df['lon1'] >= LON1) & (df['lon2'] <= LON2) & (df['lat1'] >= LAT1) & (df['lat2'] <= LAT2)] 
 #     outdat = pd.concat([outdat, dat])
@@ -108,7 +103,10 @@ LAT2 = -39
 
 # outdat.head()
 
-# Assign EEZ indicator for GFW
+# # For 10d, attach vessel data
+# outdat = outdat.merge(vessels, on='mmsi')
+
+# # Assign EEZ indicator for GFW
 # def eez_check(lon, lat):
 #     pnts = gpd.GeoDataFrame(geometry=[Point(lon, lat)])
 #     check = pnts.assign(**{key: pnts.within(geom) for key, geom in polys.items()})
@@ -118,15 +116,11 @@ LAT2 = -39
 # shpfile1 = gpd.read_file("data/EEZ/eez_v10.shp")
 # arg = shpfile1[shpfile1.Territory1 == 'Argentina'].reset_index(drop=True)  #268
 
-# lat = -45
-# lon = -63
+# #lat = -45
+# #lon = -63
 
 # # Get polygons to check
-# polys = gpd.GeoSeries({
-#     'Argentina_EEZ': arg.geometry
-# })
-
-# # gfw = gfw.loc[1:50, :]
+# polys = gpd.GeoSeries({'Argentina_EEZ': arg.geometry})
 
 # # Get lat/lon for vessels
 # outdat.loc[:, 'eez'] = outdat.apply(lambda x: eez_check(x['lon1'], x['lat1']), axis=1)
@@ -134,8 +128,7 @@ LAT2 = -39
 # outdat.head()
 
 # outdat = outdat.reset_index(drop=True)
-#outdat.to_feather("data/patagonia_shelf_gfw_effort_10d_data.feather")
-#outdat.to_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
+# outdat.to_feather("data/patagonia_shelf_gfw_effort_10d_data.feather")
 
 
 # --------------------------------------------------------------------
@@ -219,8 +212,9 @@ LAT2 = -39
 # lon_bin western edge of grid
 # lat2 northern edge
 # lon2 eastern edge
+
+# Global fish watch 10d processed data
 gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_10d_data.feather")
-# gfw = pd.read_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
 
 # seascape data
 sea = pd.read_feather("data/patagonia_shelf_seascapes_2012-2016.feather")
@@ -234,12 +228,6 @@ chl = pd.read_feather('data/patagonia_shelf_CHL_2012-2016.feather')
 #gfw.head()
 #sea.head()
 #sst.head()
-
-
-
-
-
-
 
 # For each day
 # in each year
@@ -274,29 +262,22 @@ chl['day'] = pd.DatetimeIndex(chl['date']).day
 def dist(lat1, lon1, lat2, lon2):
     return np.sqrt( (lat2 - lat1)**2 + (lon2 - lon1)**2)
 
+# Get seascape lat/lon
 def find_seascape(lat, lon):
-
     #lat = -47
     #lon = -67
-
     lat1 = lat - .5
     lat2 = lat + .5
     lon1 = lon - .5
     lon2 = lon + .5
-
     indat = sea[(sea['lon'].values >= lon1) & (sea['lon'].values <= lon2) & (sea['lat'].values >= lat1) & (sea['lat'].values <= lat2)] 
-    
-    distances = indat.apply(
-        lambda row: dist(lat, lon, row['lat'], row['lon']), 
-        axis=1)
-    
-    rdat = pd.DataFrame({
-        "seascape_class": [indat.loc[distances.idxmin(), 'seascape_class']],
-        "seascape_prob": [indat.loc[distances.idxmin(), 'seascape_prob']]
-    })
+    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    rdat = pd.DataFrame({"seascape_class": [indat.loc[distances.idxmin(), 'seascape_class']], "seascape_prob": [indat.loc[distances.idxmin(), 'seascape_prob']]})
     #print(rdat)
     #return rdat
     return (indat.loc[distances.idxmin(), 'seascape_class'], indat.loc[distances.idxmin(), 'seascape_prob'])
+
+
 
 def find_sst(lat, lon):
 
@@ -307,9 +288,7 @@ def find_sst(lat, lon):
 
     indat = sst[(sst['lon'].values >= lon1) & (sst['lon'].values <= lon2) & (sst['lat'].values >= lat1) & (sst['lat'].values <= lat2)] 
     
-    distances = indat.apply(
-        lambda row: dist(lat, lon, row['lat'], row['lon']), 
-        axis=1)
+    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
     #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
     return indat.loc[distances.idxmin(), 'sst']
 
@@ -322,11 +301,8 @@ def find_chlor(lat, lon):
 
     indat = chl[(chl['lon'].values >= lon1) & (chl['lon'].values <= lon2) & (chl['lat'].values >= lat1) & (chl['lat'].values <= lat2)] 
     
-    distances = indat.apply(
-        lambda row: dist(lat, lon, row['lat'], row['lon']), 
-        axis=1)
-    
-    
+    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+        
     return indat.loc[distances.idxmin(), 'chlor_a']
 
 #@ray.remote
@@ -347,10 +323,10 @@ def process_days(dat):
     # Link sst to effort
     dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
 
-    print(f"4-Save data to data/processed/processed_{date}.feather")
+    print(f"4-Save data to data/processed/10d/processed_{date}.feather")
     # Save data
     outdat = dat.reset_index(drop=True)
-    outdat.to_feather(f"data/processed/processed_{date}.feather")
+    outdat.to_feather(f"data/processed/10d/processed_{date}.feather")
     #print(f"{date}: COMPLETE")
 
     #return outdat
@@ -361,14 +337,9 @@ days = [gb.get_group(x) for x in gb.groups]
 
 # Debug
 #days = days[0]
-
-#days[0] = days[0].loc[0:3, :]
-#days[1] = days[1].loc[0:3, :]
-
 #days = days.loc[1:3, :]
-
-#dat = days.loc[1:3, :]
 #test = process_days(days)
+
 #test2 = sst[sst.date == '2012-01-01']
 
 #test2.head()
@@ -387,7 +358,7 @@ pool.map(process_days, days)
 pool.close()
 
 # Combine processed files
-files = glob.glob('data/processed/*.feather')
+files = glob.glob('data/processed/10d/*.feather')
 files
 list_ = []
 for file in files:
@@ -397,10 +368,7 @@ for file in files:
 
 
 mdat = mdat.reset_index(drop=True)
-mdat.to_feather('data/full_gfw_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
-
-
-
+mdat.to_feather('data/full_gfw_10d_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
 
 
 
