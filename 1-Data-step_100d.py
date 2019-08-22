@@ -19,10 +19,12 @@ from shapely.geometry import Point, Polygon, shape
 import shapefile
 
 
+
 LON1 = -68
 LON2 = -51
-LAT1 = -48
+LAT1 = -51
 LAT2 = -39
+
 
 # Uncomment to reprocess GFW effort and Seascape data
 #--------------------------------------------------------------------------------
@@ -77,7 +79,8 @@ LAT2 = -39
 # # ----------------------------------------------------------------------
 # # Parse: GFW Effort Data -----------------------------------------------
 # # Get global fish watch data
-# #GFW_DIR = '/data2/GFW_public/fishing_effort_100d/daily_csvs'
+
+# GFW_DIR = '/data2/GFW_public/fishing_effort_100d/daily_csvs'
 
 # list_ = []
 # outdat = pd.DataFrame()
@@ -87,11 +90,11 @@ LAT2 = -39
 #     #print(file_)
 #     df = pd.read_csv(file_, index_col=None, header=0, low_memory=False)
     
-#     # 100d
-#     # df['lat1'] = df['lat_bin']/100
-#     # df['lon1'] = df['lon_bin']/100
-#     # df['lat2'] = df['lat1'] + 0.010
-#     # df['lon2'] = df['lon1'] + 0.010
+#     #100d
+#     df['lat1'] = df['lat_bin']/100
+#     df['lon1'] = df['lon_bin']/100
+#     df['lat2'] = df['lat1'] + 0.010
+#     df['lon2'] = df['lon1'] + 0.010
     
 #     dat = df[(df['lon1'] >= LON1) & (df['lon2'] <= LON2) & (df['lat1'] >= LAT1) & (df['lat2'] <= LAT2)] 
 #     outdat = pd.concat([outdat, dat])
@@ -118,7 +121,7 @@ LAT2 = -39
 # outdat.head()
 
 # outdat = outdat.reset_index(drop=True)
-#outdat.to_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
+# outdat.to_feather("data/patagonia_shelf_gfw_effort_100d_data.feather")
 
 
 # --------------------------------------------------------------------

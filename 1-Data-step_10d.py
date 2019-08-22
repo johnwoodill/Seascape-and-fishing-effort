@@ -21,8 +21,9 @@ import shapefile
 
 LON1 = -68
 LON2 = -51
-LAT1 = -48
+LAT1 = -51
 LAT2 = -39
+
 
 # Uncomment to reprocess GFW effort and Seascape data
 #--------------------------------------------------------------------------------
