@@ -135,18 +135,18 @@ LAT2 = -39
 # --------------------------------------------------------------------
 # Parse: Seascape Data -----------------------------------------------
 
-# https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-48&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf
+# https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-51&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf
 
-# url = f"https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-48&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf"    
+# url = f"https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=-39&west=-68&east=-51&south=-51&disableProjSubset=on&horizStride=1&time_start=2012-01-01T12%3A00%3A00Z&time_end=2016-12-31T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf"    
 
 # # Download classes
 # urllib.request.urlretrieve(url, filename = f"data/seascapes/seascapes_8D_CLASS_PROB_2012-2016.nc")    
 
-
 # file = "data/seascapes/seascapes_8D_CLASS_PROB_2012-2016.nc"
 
 # ds = xr.open_dataset(file)
-# df = ds.to_dataframe().reset_index()
+# df = ds.to_dataframe()
+# df = df.reset_index()
 # df = df[(df['lon'] >= LON1) & (df['lon'] <= LON2)]
 # df = df[(df['lat'] >= LAT1) & (df['lat'] <= LAT2)]
 # df = df.reset_index(drop=True)
@@ -157,7 +157,7 @@ LAT2 = -39
 # df.columns = ['date', 'lon', 'lat', 'seascape_class', 'seascape_prob']
 # df.to_feather('data/patagonia_shelf_seascapes_2012-2016.feather')
 
-# Parse: SST Temperature -----------------------------------------------
+#Parse: SST Temperature -----------------------------------------------
 
 # files = glob.glob('/data2/SST/8DAY/*.nc')
 
@@ -175,6 +175,8 @@ LAT2 = -39
 #     df = df[['date', 'lon', 'lat', 'sst']]
 #     rdat = pd.concat([rdat, df])
 #     print(f"{year}" + f"-{month}".zfill(3) + f"-{day}".zfill(3))
+
+
 
 # rdat = rdat.reset_index()
 # rdat = rdat[['date', 'lon', 'lat', 'sst']]
@@ -263,16 +265,23 @@ chl['day'] = pd.DatetimeIndex(chl['date']).day
 def dist(lat1, lon1, lat2, lon2):
     return np.sqrt( (lat2 - lat1)**2 + (lon2 - lon1)**2)
 
+
+
 # Get seascape lat/lon
 def find_seascape(lat, lon):
-    #lat = -47
-    #lon = -67
+    #lat = -51
+    #lon = -68
     lat1 = lat - .5
     lat2 = lat + .5
     lon1 = lon - .5
     lon2 = lon + .5
     indat = sea[(sea['lon'].values >= lon1) & (sea['lon'].values <= lon2) & (sea['lat'].values >= lat1) & (sea['lat'].values <= lat2)] 
-    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    #distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    
+    distances = indat.apply(
+        lambda row: dist(lat, lon, row['lat'], row['lon']), 
+        axis=1)
+    
     #rdat = pd.DataFrame({"seascape_class": [indat.loc[distances.idxmin(), 'seascape_class']], "seascape_prob": [indat.loc[distances.idxmin(), 'seascape_prob']]})
     #print(rdat)
     #return rdat
@@ -289,9 +298,15 @@ def find_sst(lat, lon):
 
     indat = sst[(sst['lon'].values >= lon1) & (sst['lon'].values <= lon2) & (sst['lat'].values >= lat1) & (sst['lat'].values <= lat2)] 
     
-    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    distances = indat.apply(
+        lambda row: dist(lat, lon, row['lat'], row['lon']), 
+        axis=1)
+
+    #distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
     #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
     return indat.loc[distances.idxmin(), 'sst']
+
+
 
 def find_chlor(lat, lon):
 
@@ -306,15 +321,18 @@ def find_chlor(lat, lon):
         
     return indat.loc[distances.idxmin(), 'chlor_a']
 
+
+
 #@ray.remote
 def process_days(dat):
     date = dat['date'].iat[0]
+
     #print(f"Processing data for: {date}")
 
     #print("1-Linking Effort and Seascape")
     # Link seascape to effort
-    dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat2'], row['lon2']), axis=1))
-    # zip(*df_test['size'].apply(sizes))
+    dat.loc[:, 'seascape_class'], dat.loc[:, 'seascape_prob'] = zip(*dat.apply(lambda row: find_seascape(row['lat1'], row['lon1']), axis=1))
+    
     
     #print("2-Linking Effort and SST")
     # Link sst to effort
@@ -341,6 +359,10 @@ days = [gb.get_group(x) for x in gb.groups]
 # days = days.loc[1:3, :]
 # test = process_days(days)
 
+#dat = days[141]
+
+#process_days(dat)
+
 #test2 = sst[sst.date == '2012-01-01']
 
 #test2.head()
@@ -348,8 +370,9 @@ days = [gb.get_group(x) for x in gb.groups]
 #ray.init()
 #1626474458
 #1000000000
-
+#0000
 #results = ray.get([process_days.remote(i) for i in days])
+
 #
 #ray.shutdown()
 
