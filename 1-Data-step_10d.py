@@ -273,7 +273,7 @@ def find_seascape(lat, lon):
     lon2 = lon + .5
     indat = sea[(sea['lon'].values >= lon1) & (sea['lon'].values <= lon2) & (sea['lat'].values >= lat1) & (sea['lat'].values <= lat2)] 
     distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
-    rdat = pd.DataFrame({"seascape_class": [indat.loc[distances.idxmin(), 'seascape_class']], "seascape_prob": [indat.loc[distances.idxmin(), 'seascape_prob']]})
+    #rdat = pd.DataFrame({"seascape_class": [indat.loc[distances.idxmin(), 'seascape_class']], "seascape_prob": [indat.loc[distances.idxmin(), 'seascape_prob']]})
     #print(rdat)
     #return rdat
     return (indat.loc[distances.idxmin(), 'seascape_class'], indat.loc[distances.idxmin(), 'seascape_prob'])
@@ -318,11 +318,11 @@ def process_days(dat):
     
     #print("2-Linking Effort and SST")
     # Link sst to effort
-    dat.loc[:, 'sst'] = dat.apply(lambda row: find_sst(row['lat2'], row['lon2']), axis=1)
+    dat.loc[:, 'sst'] = dat.apply(lambda row: find_sst(row['lat1'], row['lon1']), axis=1)
     
     #print("3-Linking Effort and CHL")
     # Link sst to effort
-    dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat2'], row['lon2']), axis=1)
+    dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat1'], row['lon1']), axis=1)
 
     print(f"4-Save data to data/processed/10d/processed_{date}.feather")
     # Save data
@@ -336,10 +336,10 @@ def process_days(dat):
 gb = gfw.groupby('date')
 days = [gb.get_group(x) for x in gb.groups]
 
-# Debug
-#days = days[0]
-#days = days.loc[1:3, :]
-#test = process_days(days)
+# # Debug
+# days = days[0].reset_index(drop=True)
+# days = days.loc[1:3, :]
+# test = process_days(days)
 
 #test2 = sst[sst.date == '2012-01-01']
 
