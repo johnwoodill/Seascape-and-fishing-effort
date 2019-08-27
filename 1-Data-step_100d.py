@@ -363,6 +363,11 @@ for file in files:
     mdat = pd.concat(list_, sort=False)
 
 
+mdat['eez'] = np.where(mdat['lat1'] > -48, np.where(mdat['lon1'] < -65, True, mdat['eez']), mdat['eez'])
+mdat['eez'] = np.where(mdat['lat1'] > -44, np.where(mdat['lon1'] < -63, True, mdat['eez']), mdat['eez'])
+mdat['eez'] = np.where(mdat['lat1'] > -40, np.where(mdat['lon1'] < -61, True, mdat['eez']), mdat['eez'])
+
+
 mdat = mdat.reset_index(drop=True)
 mdat.to_feather('data/full_gfw_100d_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
 
