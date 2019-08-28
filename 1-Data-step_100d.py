@@ -168,9 +168,57 @@ LAT2 = -39
 #     rdat = pd.concat([rdat, df])
 #     print(f"{year}" + f"-{month}".zfill(3) + f"-{day}".zfill(3))
 
+
+
 # rdat = rdat.reset_index()
 # rdat = rdat[['date', 'lon', 'lat', 'sst']]
 # rdat.to_feather('data/patagonia_shelf_SST_2012-2016.feather')
+
+
+# Parse: SST Gradient
+# def sst_gradient(sst_dat):
+#     sst_dat = sst_dat.sort_values('date')
+    
+#     # Check dates are consistent
+#     check1 = sst_dat.date.iat[0] == '2012-01-01'
+#     check2 = sst_dat.date.iat[-1] == '2016-12-26'
+#     print(sst_dat.lon_lat.iat[0], check1, check2) if( (check1 == False) | (check2 == False)) else None
+    
+#     # Get sst and interpolate NA
+#     sst = sst_dat['sst'].copy()
+#     nans, x= np.isnan(sst), lambda z: z.to_numpy().nonzero()[0]
+#     sst[nans] = np.interp(x(nans), x(~nans), sst[~nans])
+    
+#     # Get gradient
+#     sst_dat.loc[:, 'sst_grad'] = np.gradient(sst)
+#     return sst_dat
+    
+# rdat = pd.read_feather('data/patagonia_shelf_SST_2012-2016.feather')
+# rdat.loc[:, 'lon_lat'] = rdat.lon.astype(str) + '_' + rdat.lat.astype(str)
+
+# # 230 days in date
+# # Keep on those locations with more 
+# ccount = rdat.groupby('lon_lat')['sst'].apply(lambda x: x.isnull().sum()).reset_index()
+# ccount = ccount[ccount.sst <= 100]
+# rdat = rdat[rdat.lon_lat.isin(ccount.lon_lat)]
+
+# # Get gradient for each location
+# rdat = rdat.sort_values('date')
+# rdat = rdat.groupby('lon_lat').apply(lambda x: sst_gradient(x))
+# rdat = rdat.reset_index(drop=True)
+
+# rdat = rdat[['date', 'lon', 'lat', 'sst', 'sst_grad']]
+
+# rdat.to_feather('data/patagonia_shelf_SST_2012-2016.feather')
+
+# Debug test
+# test = rdat[rdat.lon_lat == '-67.97916412353516_-50.10417556762695']
+# test.head()
+# test2 = test.groupby('lon_lat').apply(lambda x: sst_gradient(x))
+# test2 = test2.reset_index(drop=True)
+# test2.head()
+
+
 
 
 # Parse: CHL -----------------------------------------------
@@ -274,19 +322,23 @@ def find_seascape(lat, lon):
 
 def find_sst(lat, lon):
 
-    
     lat1 = lat - .5
     lat2 = lat + .5
     lon1 = lon - .5
     lon2 = lon + .5
 
-    
     indat = sst[(sst['lon'].values >= lon1) & (sst['lon'].values <= lon2) & (sst['lat'].values >= lat1) & (sst['lat'].values <= lat2)] 
     
-    
-    distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    distances = indat.apply(
+        lambda row: dist(lat, lon, row['lat'], row['lon']), 
+        axis=1)
+
+    #distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
     #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
-    return indat.loc[distances.idxmin(), 'sst']
+    return (indat.loc[distances.idxmin(), 'sst'], indat.loc[distances.idxmin(), 'sst_grad'])
+
+
+
 
 def find_chlor(lat, lon):
 

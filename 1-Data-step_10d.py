@@ -183,6 +183,127 @@ LAT2 = -39
 # rdat.to_feather('data/patagonia_shelf_SST_2012-2016.feather')
 
 
+# Parse: SST Gradient
+# def sst_gradient(sst_dat):
+#     sst_dat = sst_dat.sort_values('date')
+    
+#     # Check dates are consistent
+#     check1 = sst_dat.date.iat[0] == '2012-01-01'
+#     check2 = sst_dat.date.iat[-1] == '2016-12-26'
+#     print(sst_dat.lon_lat.iat[0], check1, check2) if( (check1 == False) | (check2 == False)) else None
+    
+#     # Get sst and interpolate NA
+#     sst = sst_dat['sst'].copy()
+#     nans, x= np.isnan(sst), lambda z: z.to_numpy().nonzero()[0]
+#     sst[nans] = np.interp(x(nans), x(~nans), sst[~nans])
+    
+#     # Get gradient
+#     sst_dat.loc[:, 'sst_grad'] = np.gradient(sst)
+#     return sst_dat
+
+   
+# rdat = pd.read_feather('data/patagonia_shelf_SST_2012-2016.feather')
+# rdat.loc[:, 'lon_lat'] = rdat.lon.astype(str) + '_' + rdat.lat.astype(str)
+
+# # 230 days in date
+# # Keep on those locations with more 
+# ccount = rdat.groupby('lon_lat')['sst'].apply(lambda x: x.isnull().sum()).reset_index()
+# ccount = ccount[ccount.sst <= 100]
+# rdat = rdat[rdat.lon_lat.isin(ccount.lon_lat)]
+
+# # Get gradient for each location
+# rdat = rdat.sort_values('date')
+# rdat = rdat.groupby('lon_lat').apply(lambda x: sst_gradient(x))
+# rdat = rdat.reset_index(drop=True)
+
+# rdat = rdat[['date', 'lon', 'lat', 'sst', 'sst_grad']]
+
+# rdat.to_feather('data/patagonia_shelf_SST_2012-2016.feather')
+
+# Debug test
+# test = rdat[rdat.lon_lat == '-67.97916412353516_-50.10417556762695']
+# test.head()
+# test2 = test.groupby('lon_lat').apply(lambda x: sst_gradient(x))
+# test2 = test2.reset_index(drop=True)
+# test2.head()
+
+
+
+
+#Parse: SST4 Temperature -----------------------------------------------
+
+# files = glob.glob('/data2/SST4/8DAY/*.nc')
+
+# rdat = pd.DataFrame()
+# for file_ in files:
+#     ds = xr.open_dataset(file_, drop_variables=['qual_sst4', 'palette'])
+#     df = ds.to_dataframe().reset_index()
+#     df = df[(df['lon'] >= LON1) & (df['lon'] <= LON2)]
+#     df = df[(df['lat'] >= LAT1) & (df['lat'] <= LAT2)]
+#     df['date'] = ds.time_coverage_start
+#     year = pd.DatetimeIndex(df['date'])[0].year
+#     month = pd.DatetimeIndex(df['date'])[0].month
+#     day = pd.DatetimeIndex(df['date'])[0].day
+#     df['date'] = f"{year}" + f"-{month}".zfill(3) + f"-{day}".zfill(3)
+#     df['date'] = pd.DatetimeIndex(df['date']) + pd.DateOffset(1)
+#     df = df[['date', 'lon', 'lat', 'sst4']]
+#     rdat = pd.concat([rdat, df])
+#     print(df.date.iat[0])
+    
+
+
+
+# rdat = rdat.reset_index()
+# rdat = rdat[['date', 'lon', 'lat', 'sst4']]
+# rdat.to_feather('data/patagonia_shelf_SST4_2012-2016.feather')
+
+
+# # Parse: SST4 Gradient
+# def sst4_gradient(sst_dat):
+#     #print(sst_dat.head())
+#     sst_dat = sst_dat.sort_values('date')
+    
+#     # Check dates are consistent
+#     #check1 = sst_dat.date.iat[0] == '2012-01-01'
+#     #check2 = sst_dat.date.iat[-1] == '2016-12-26'
+#     #print(sst_dat.lon_lat.iat[0], check1, check2) if( (check1 == False) | (check2 == False)) else None
+    
+#     # Get sst and interpolate NA
+#     sst = sst_dat['sst4'].copy()
+#     nans, x= np.isnan(sst), lambda z: z.to_numpy().nonzero()[0]
+#     sst[nans] = np.interp(x(nans), x(~nans), sst[~nans])
+    
+#     # Get gradient
+#     sst_dat.loc[:, 'sst4_grad'] = np.gradient(sst)
+#     return sst_dat
+
+   
+# rdat = pd.read_feather('data/patagonia_shelf_SST4_2012-2016.feather')
+# rdat.loc[:, 'lon_lat'] = rdat.lon.astype(str) + '_' + rdat.lat.astype(str)
+
+# # 230 days in date
+# # Keep on those locations with more 
+# ccount = rdat.groupby('lon_lat')['sst4'].apply(lambda x: x.isnull().sum()).reset_index()
+# ccount = ccount[ccount.sst4 <= 100]
+# rdat = rdat[rdat.lon_lat.isin(ccount.lon_lat)]
+# rdat = rdat.reset_index(drop=True)
+
+
+
+# # Get gradient for each location
+# rdat = rdat.sort_values('date')
+# rdat = rdat.groupby('lon_lat').apply(lambda x: sst4_gradient(x))
+# rdat = rdat.reset_index(drop=True)
+
+# rdat = rdat[['date', 'lon', 'lat', 'sst4', 'sst4_grad']]
+
+# rdat.to_feather('data/patagonia_shelf_SST4_2012-2016.feather')
+
+
+
+
+
+
 # Parse: CHL -----------------------------------------------
 
 # files = glob.glob('/data2/CHL/NC/8DAY/*.nc')
@@ -224,6 +345,9 @@ sea = pd.read_feather("data/patagonia_shelf_seascapes_2012-2016.feather")
 
 # sea surface temp
 sst = pd.read_feather('data/patagonia_shelf_SST_2012-2016.feather')
+
+# sea surface temp
+sst4 = pd.read_feather('data/patagonia_shelf_SST4_2012-2016.feather')
 
 # Chlor
 chl = pd.read_feather('data/patagonia_shelf_CHL_2012-2016.feather')
@@ -304,7 +428,25 @@ def find_sst(lat, lon):
 
     #distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
     #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
-    return indat.loc[distances.idxmin(), 'sst']
+    return (indat.loc[distances.idxmin(), 'sst'], indat.loc[distances.idxmin(), 'sst_grad'])
+
+
+def find_sst4(lat, lon):
+
+    lat1 = lat - .5
+    lat2 = lat + .5
+    lon1 = lon - .5
+    lon2 = lon + .5
+
+    indat = sst4[(sst4['lon'].values >= lon1) & (sst4['lon'].values <= lon2) & (sst4['lat'].values >= lat1) & (sst4['lat'].values <= lat2)] 
+    
+    distances = indat.apply(
+        lambda row: dist(lat, lon, row['lat'], row['lon']), 
+        axis=1)
+
+    #distances = indat.apply(lambda row: dist(lat, lon, row['lat'], row['lon']), axis=1)
+    #print(indat.loc[distances.idxmin(), ['sst', 'lon', 'lat']])
+    return (indat.loc[distances.idxmin(), 'sst4'], indat.loc[distances.idxmin(), 'sst4_grad'])
 
 
 
@@ -336,8 +478,11 @@ def process_days(dat):
     
     #print("2-Linking Effort and SST")
     # Link sst to effort
-    dat.loc[:, 'sst'] = dat.apply(lambda row: find_sst(row['lat1'], row['lon1']), axis=1)
-    
+    dat.loc[:, 'sst'], dat.loc[:, 'sst_grad'] = zip(*dat.apply(lambda row: find_sst(row['lat1'], row['lon1']), axis=1))
+
+    # SST 4
+    dat.loc[:, 'sst4'], dat.loc[:, 'sst4_grad'] = zip(*dat.apply(lambda row: find_sst4(row['lat1'], row['lon1']), axis=1))
+
     #print("3-Linking Effort and CHL")
     # Link sst to effort
     dat.loc[:, 'chlor_a'] = dat.apply(lambda row: find_chlor(row['lat1'], row['lon1']), axis=1)
@@ -351,13 +496,16 @@ def process_days(dat):
     #return outdat
 
 
+
+
 gb = gfw.groupby('date')
 days = [gb.get_group(x) for x in gb.groups]
 
 # # Debug
 # days = days[0].reset_index(drop=True)
-# days = days.loc[1:3, :]
-# test = process_days(days)
+# days = days.loc[1:5, :]
+# dat = days
+# process_days(days)
 
 #dat = days[141]
 
@@ -390,15 +538,17 @@ for file in files:
     list_.append(df)
     mdat = pd.concat(list_, sort=False)
 
+# Manually remove veseels near land in eez
 
-mdat['eez'] = np.where(mdat['lat1'] > -48, np.where(mdat['lon1'] < -65, True, mdat['eez']), mdat['eez'])
-mdat['eez'] = np.where(mdat['lat1'] > -44, np.where(mdat['lon1'] < -63, True, mdat['eez']), mdat['eez'])
-mdat['eez'] = np.where(mdat['lat1'] > -40, np.where(mdat['lon1'] < -61, True, mdat['eez']), mdat['eez'])
+mdat.loc[:, 'eez'] = np.where(np.logical_and(mdat['lat1'] > -48, mdat['lon1'] < -65), True, mdat['eez'])
+mdat.loc[:, 'eez'] = np.where(np.logical_and(mdat['lat1'] > -44, mdat['lon1'] < -63), True, mdat['eez'])
+mdat.loc[:, 'eez'] = np.where(np.logical_and(mdat['lat1'] > -40, mdat['lon1'] < -61), True, mdat['eez'])
 
 mdat = mdat.reset_index(drop=True)
 mdat.to_feather('data/full_gfw_10d_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
 
 
-# Manually remove veseels near land in eez
+
 #mdat = pd.read_feather('data/full_gfw_10d_effort_model_data_8DAY_2012-01-01_2016-12-26.feather')
 #mdat.to_feather('data/test.feather')
+
