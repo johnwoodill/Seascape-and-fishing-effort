@@ -41,13 +41,13 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 clf = RandomForestRegressor()
 clf.fit(X_train, y_train)
 
-clf.feature_importances_
-
 fea_import = pd.DataFrame({'variable': X.columns , 'importance': clf.feature_importances_})
 fea_import.sort_values('importance', ascending=False)
 
 # 10-Fold Cross validation
-print( np.mean(cross_val_score(clf, X_test, y_test, cv=5)))
+#print( np.mean(cross_val_score(clf, X_test, y_test, cv=5)))
 
+scores = cross_val_score(clf, X_test, y_test)
+print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 
 X.columns
