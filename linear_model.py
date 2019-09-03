@@ -62,6 +62,8 @@ y.head()
 mod = sm.OLS(y, X).fit()
 mod.summary()
 
+
+
 # Rolling-year Cross validate
 pred_score = pd.DataFrame()
 for year in range(2013, 2017):
